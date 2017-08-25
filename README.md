@@ -4,12 +4,12 @@ This repository contains code for a simple simulated underwater environment wher
 
 ![human_view](images/waterworld.png)
 
-###Setup
+### Setup
 To run the simulation first setup the anaconda environment.
 
 conda env create -f environment.yml
 
-###Running
+### Running
 Then run the run_human.py script
 
 Control the agent with the 'W, A, S D' keys. 
