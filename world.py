@@ -379,8 +379,8 @@ class World(object):
 
         if self.human_view:
             self.draw_topdown()
-            if self.run_lidar:
-                self.draw_lidar()
+            #if self.run_lidar:
+            #    self.draw_lidar()
         # try moving items
         if self.move_items:
             self.moveitems()
@@ -536,29 +536,35 @@ class World(object):
 
         xpos = self.agent.pos[0] * block_dim + self.width / 2.
         ypos = self.agent.pos[1] * block_dim
+        if self.run_lidar:
+            self.draw_lidar()
         self.draw_mini(xpos, ypos, OBJECT_MAP['agent'])
 
     def draw_lidar(self):
         xpos = self.width / 2
         block_dim = xpos / self.map_size[0]
 
-        pos = self.agent.pos.reshape(1, 2)
-        dir = self.agent.dir.reshape(1, 2)  #* 0.1
-        plane = self.agent.plane.reshape(1, 2)  #* 4
 
-        nsamples = self.reslidar
+        #pos = self.agent.pos.reshape(1, 2)
+        dir = self.agent.dir.reshape(1, 2) /10.  #* 0.1
+        #plane = self.agent.plane.reshape(1, 2) * 4.  #* 4
+
+        angle = np.arctan2(dir[0, 1], dir[0, 0])
+        rangles = np.linspace(angle - np.pi, angle + np.pi, num=self.reslidar)
+        rdirs = np.array([np.cos(rangles), np.sin(rangles)], dtype=np.float32).T #/ np.linalg.norm(dir.flatten())
+        #nsamples = self.reslidar
         lidar = ((1. - self.lidar) * 30.).astype(int) * block_dim
-        cameraX = np.arange(0.0, nsamples, 1.)[:, np.newaxis]
-        cameraX = 2.0 * cameraX / float(nsamples) - 1.0
-        rdirs = np.ones((nsamples * 2, 2))
-        dirs = [dir, dir * -1]
-        for i in range(2):
-            rdirs[(nsamples * i):(nsamples * (i + 1)), :] = dirs[
-                i] + plane * cameraX
+        #cameraX = np.arange(0.0, nsamples, 1.)[:, np.newaxis]
+        #cameraX = 1 * (2.0 * cameraX / float(nsamples) - 1.0)
+        #rdirs = np.ones((nsamples * 2, 2))
+        #dirs = [dir, dir * -1]
+        #for i in range(2):
+        #    rdirs[(nsamples * i):(nsamples * (i + 1)), :] = dirs[
+        #        i] + plane * cameraX
 
         xpos = self.agent.pos[0] * block_dim  #+ self.width / 2.
         ypos = self.agent.pos[1] * block_dim
-        wd, ht = sprite = self.minisprites[OBJECT_MAP['agent']][1].shape[:2]
+        wd, ht = self.minisprites[OBJECT_MAP['agent']][1].shape[:2]
         xpos += wd / 2 - 1
         ypos += ht / 2 - 1
 

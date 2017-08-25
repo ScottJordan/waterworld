@@ -23,37 +23,53 @@ class Raycaster(object):
         #self.map_ = worldmap
         pos = agent.pos.reshape(1, 2)
         dir = agent.dir.reshape(1, 2)
-        plane = agent.plane.reshape(1, 2)
+        #plane = agent.plane.reshape(1, 2) * 4.
 
-        nsamples = self.resL
-        cameraX = np.arange(0.0, nsamples, 1.)[:, np.newaxis]
-        cameraX = 2.0 * cameraX / float(nsamples) - 1.0
-        dists = np.ones((nsamples * 2, ))
-        dirs = [dir, dir * -1]
-        idx = [range(nsamples), range(nsamples, nsamples * 2)[::-1]]
-        for i in range(2):
-            rpos, rdir, sdist, ddist, map_, step = self.setup_rays(
-                cameraX, pos, dirs[i], plane)
-            sdist, ddist, map_, side = self._DDA(
-                sdist, ddist, map_, step,
-                nonwall=True)
+        #nsamples = self.resL
+        #cameraX = np.arange(0.0, nsamples, 1.)[:, np.newaxis]
+        #cameraX = 1* (2.0 * cameraX / float(nsamples) - 1.0)
+        angle = np.arctan2(dir[0, 1], dir[0, 0])
+        rangles = np.linspace(angle-np.pi, angle+np.pi, num=self.resL)
+        ray_dir = np.array([np.cos(rangles), np.sin(rangles)], dtype=np.float32).T #/ np.linalg.norm(dir.flatten())
+        ray_pos = np.tile(pos, [ray_dir.shape[0], 1])
+        #dists = np.ones((nsamples * 2, ), dtype=np.float32)
+        #dirs = [dir, dir * -1]
+        #idx = [range(nsamples), range(nsamples, nsamples * 2)[::-1]]
 
-            perpWallDistX = (map_[:, 0] - rpos[:, 0] +
-                             (1.0 - step[:, 0]) / 2.0)
-            perpWallDistY = (map_[:, 1] - rpos[:, 1] +
-                             (1.0 - step[:, 1]) / 2.0)
+        rpos, rdir, sdist, ddist, map_, step = self.ray_init(ray_dir=ray_dir, ray_pos=ray_pos)
+        sdist, ddist, map_, side = self._DDA(sdist, ddist, map_, step, nonwall=True)
 
-            scaleX = (perpWallDistX / (rdir[:, 0] + self.eps))[:, np.newaxis]
-            scale = (perpWallDistY / (rdir[:, 1] + self.eps))[:, np.newaxis]
-            scale[side == 0] = scaleX[side == 0]
+        perpWallDistX = (map_[:, 0] - rpos[:, 0] + (1.0 - step[:, 0]) / 2.0)
+        perpWallDistY = (map_[:, 1] - rpos[:, 1] + (1.0 - step[:, 1]) / 2.0)
 
-            dists[idx[i]] = np.linalg.norm(scale * rdir, axis=1)
-        #dists[-10:] = dists[:10]
-        return dists
+        scaleX = (perpWallDistX / (rdir[:, 0] + self.eps))[:, np.newaxis]
+        scale = (perpWallDistY / (rdir[:, 1] + self.eps))[:, np.newaxis]
+        scale[side == 0] = scaleX[side == 0]
 
-    def setup_rays(self, cameraX, pos, dir, plane):
-        ray_pos = np.tile(pos, [cameraX.shape[0], 1])
-        ray_dir = dir + plane * cameraX
+        dist = np.linalg.norm(scale * rdir, axis=1)
+        return dist
+
+        # for i in range(2):
+        #     rpos, rdir, sdist, ddist, map_, step = self.setup_rays(
+        #         cameraX, pos, dirs[i], plane, ray_dir=ray_dir)
+        #     sdist, ddist, map_, side = self._DDA(
+        #         sdist, ddist, map_, step,
+        #         nonwall=True)
+        #
+        #     perpWallDistX = (map_[:, 0] - rpos[:, 0] +
+        #                      (1.0 - step[:, 0]) / 2.0)
+        #     perpWallDistY = (map_[:, 1] - rpos[:, 1] +
+        #                      (1.0 - step[:, 1]) / 2.0)
+        #
+        #     scaleX = (perpWallDistX / (rdir[:, 0] + self.eps))[:, np.newaxis]
+        #     scale = (perpWallDistY / (rdir[:, 1] + self.eps))[:, np.newaxis]
+        #     scale[side == 0] = scaleX[side == 0]
+        #
+        #     dists[idx[i]] = np.linalg.norm(scale * rdir, axis=1)
+        # #dists[-10:] = dists[:10]
+        # return dists
+
+    def ray_init(self, ray_dir, ray_pos):
         map_ = ray_pos.astype(int)
 
         ray_pow = np.power(ray_dir, 2.0) + self.eps
@@ -70,6 +86,12 @@ class Raycaster(object):
         side_dist[ray_dir[:, 1] < 0, 1] = _value[ray_dir[:, 1] < 0, 1]
 
         return ray_pos, ray_dir, side_dist, delta_dist, map_, step
+
+    def setup_rays(self, cameraX, pos, dir, plane):
+        ray_pos = np.tile(pos, [cameraX.shape[0], 1])
+        ray_dir = dir + plane * cameraX
+        return self.ray_init(ray_pos=ray_pos, ray_dir=ray_dir)
+
 
     def draw(self, agent, worldmap, nonwall=False):
         #self.map_ = worldmap
@@ -153,9 +175,6 @@ class Raycaster(object):
         return [r.astype(int) for r in returns] + [perpWallDist]
 
     def _DDA(self, side_dist, delta_dist, map_, step, nonwall=False):
-        #tested against for-loop version using line_profiler
-        #for-loop take about 0.005968s per call
-        #this version takes 0.000416s per call
         hits = np.zeros((map_.shape[0], 1))
         side = np.zeros((map_.shape[0], 1))
 
