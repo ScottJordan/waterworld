@@ -6,7 +6,7 @@ To run the simulation first setup the anaconda environment.
 
 conda env create -f environment.yml
 
-Then run the world.py script
+Then run the run_human.py script
 
 Control the agent with the 'W, A, S D' keys. 
 
