@@ -149,7 +149,7 @@ class World(object):
         self.wbackground = np.copy(self.background)
 
     def load_images(self):
-        files = ["./sprites/dolphin.png", "./sprites/subfix.png"]
+        files = ["graphics/sprites/dolphin.png", "graphics/sprites/sub.png"]
         if self.sprites is None:
             self.sprites = {
                 OBJECT_MAP['poison']: loadimage(
@@ -182,13 +182,12 @@ class World(object):
                 OBJECT_MAP['agent']: agent_sprite((0, 0, 0), self.color,
                                                   mdim / 2)
             }
-        self.bg1 = loadbackground(self, './backgrounds/ocean-floor.png')
-        self.bg2 = loadbackground(self, './backgrounds/ocean-floor-2.jpg')
+        self.bg1 = loadbackground(self, 'graphics/backgrounds/ocean-floor.png')
+        self.bg2 = loadbackground(self, 'graphics/backgrounds/ocean-floor-2.jpg')
 
     def make_bgwall(self):
         self.wbackground = np.copy(self.background)
         xpos = self.width / 2
-        ypos = 0
         block_dim = xpos / self.map_size[0]
         block = np.zeros((block_dim, block_dim, 3), np.float32)
         block[:, :, 0] = 93. / 255. * .75,
@@ -251,8 +250,6 @@ class World(object):
         self.items[:, 3] += 1
         agent = self.agent
         oldpos = agent.pos
-        olddir = agent.dir
-        oldplane = agent.plane
 
         newpos, newdir, newplane, newvel = self.move(agent, action)
         reward = 0.
@@ -379,8 +376,6 @@ class World(object):
 
         if self.human_view:
             self.draw_topdown()
-            #if self.run_lidar:
-            #    self.draw_lidar()
         # try moving items
         if self.move_items:
             self.moveitems()
@@ -439,13 +434,10 @@ class World(object):
             return False
 
     def move(self, agent, action):
-        vel = np.copy(agent.vel)
         pos = np.copy(agent.pos)
         dir = np.copy(agent.dir)
         plane = np.copy(agent.plane)
 
-        #acc = action[0]
-        #vel *= 0.9
         try:
             xturn = np.cos(action[1])
             yturn = np.sin(action[1])
@@ -545,50 +537,29 @@ class World(object):
         block_dim = xpos / self.map_size[0]
 
 
-        #pos = self.agent.pos.reshape(1, 2)
         dir = self.agent.dir.reshape(1, 2) /10.  #* 0.1
-        #plane = self.agent.plane.reshape(1, 2) * 4.  #* 4
 
         angle = np.arctan2(dir[0, 1], dir[0, 0])
         rangles = np.linspace(angle - np.pi, angle + np.pi, num=self.reslidar)
-        rdirs = np.array([np.cos(rangles), np.sin(rangles)], dtype=np.float32).T #/ np.linalg.norm(dir.flatten())
-        #nsamples = self.reslidar
+        rdirs = np.array([np.cos(rangles), np.sin(rangles)], dtype=np.float32).T
         lidar = ((1. - self.lidar) * 30.).astype(int) * block_dim
-        #cameraX = np.arange(0.0, nsamples, 1.)[:, np.newaxis]
-        #cameraX = 1 * (2.0 * cameraX / float(nsamples) - 1.0)
-        #rdirs = np.ones((nsamples * 2, 2))
-        #dirs = [dir, dir * -1]
-        #for i in range(2):
-        #    rdirs[(nsamples * i):(nsamples * (i + 1)), :] = dirs[
-        #        i] + plane * cameraX
 
-        xpos = self.agent.pos[0] * block_dim  #+ self.width / 2.
+        xpos = self.agent.pos[0] * block_dim
         ypos = self.agent.pos[1] * block_dim
         wd, ht = self.minisprites[OBJECT_MAP['agent']][1].shape[:2]
         xpos += wd / 2 - 1
         ypos += ht / 2 - 1
 
         pt = ((rdirs * lidar[:, np.newaxis]) + [xpos, ypos]).astype(np.int)
-        #limg = np.zeros((self.width / 2., self.width / 2.))
-        #r = []
-        #c = []
-        #v = []
         for i in range(pt.shape[0]):
             rr, cc, val = line_aa(int(xpos), int(ypos), pt[i, 0], pt[i, 1])
             rr = np.clip(rr, 0, 511)
             cc = np.clip(cc, 0, 511)
-            #val *= 255
-            #limg[rr, cc] += val
-            #r.append(rr)
-            #c.append(cc)
-            #v.append(val)
-            #print(rr.shape, cc.shape, val.shape)
             row = rr + int(self.width / 2)
             self.gscreen[row, cc, 0] = val
             self.gscreen[row, cc, 1] = val
             self.gscreen[row, cc, 2] = val
 
-        #return r, c, v
 
     def draw_mini(self, x, y, obj):
         sprite = self.minisprites[obj]

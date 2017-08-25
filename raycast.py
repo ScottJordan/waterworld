@@ -20,21 +20,13 @@ class Raycaster(object):
         self.eps = 1e-7
 
     def lidar(self, agent, worldmap):
-        #self.map_ = worldmap
         pos = agent.pos.reshape(1, 2)
         dir = agent.dir.reshape(1, 2)
-        #plane = agent.plane.reshape(1, 2) * 4.
 
-        #nsamples = self.resL
-        #cameraX = np.arange(0.0, nsamples, 1.)[:, np.newaxis]
-        #cameraX = 1* (2.0 * cameraX / float(nsamples) - 1.0)
         angle = np.arctan2(dir[0, 1], dir[0, 0])
         rangles = np.linspace(angle-np.pi, angle+np.pi, num=self.resL)
         ray_dir = np.array([np.cos(rangles), np.sin(rangles)], dtype=np.float32).T #/ np.linalg.norm(dir.flatten())
         ray_pos = np.tile(pos, [ray_dir.shape[0], 1])
-        #dists = np.ones((nsamples * 2, ), dtype=np.float32)
-        #dirs = [dir, dir * -1]
-        #idx = [range(nsamples), range(nsamples, nsamples * 2)[::-1]]
 
         rpos, rdir, sdist, ddist, map_, step = self.ray_init(ray_dir=ray_dir, ray_pos=ray_pos)
         sdist, ddist, map_, side = self._DDA(sdist, ddist, map_, step, nonwall=True)
@@ -48,26 +40,6 @@ class Raycaster(object):
 
         dist = np.linalg.norm(scale * rdir, axis=1)
         return dist
-
-        # for i in range(2):
-        #     rpos, rdir, sdist, ddist, map_, step = self.setup_rays(
-        #         cameraX, pos, dirs[i], plane, ray_dir=ray_dir)
-        #     sdist, ddist, map_, side = self._DDA(
-        #         sdist, ddist, map_, step,
-        #         nonwall=True)
-        #
-        #     perpWallDistX = (map_[:, 0] - rpos[:, 0] +
-        #                      (1.0 - step[:, 0]) / 2.0)
-        #     perpWallDistY = (map_[:, 1] - rpos[:, 1] +
-        #                      (1.0 - step[:, 1]) / 2.0)
-        #
-        #     scaleX = (perpWallDistX / (rdir[:, 0] + self.eps))[:, np.newaxis]
-        #     scale = (perpWallDistY / (rdir[:, 1] + self.eps))[:, np.newaxis]
-        #     scale[side == 0] = scaleX[side == 0]
-        #
-        #     dists[idx[i]] = np.linalg.norm(scale * rdir, axis=1)
-        # #dists[-10:] = dists[:10]
-        # return dists
 
     def ray_init(self, ray_dir, ray_pos):
         map_ = ray_pos.astype(int)
@@ -94,7 +66,6 @@ class Raycaster(object):
 
 
     def draw(self, agent, worldmap, nonwall=False):
-        #self.map_ = worldmap
         self.pos = agent.pos.reshape(1, 2)
         self.dir = agent.dir.reshape(1, 2)
         self.plane = agent.plane.reshape(1, 2)
@@ -154,20 +125,13 @@ class Raycaster(object):
         bottoms[bottoms >= self.height] = self.height - 1
         bottoms = bottoms.astype(int)
 
-        #visible_blocks = self.map_[map_[:, 0], map_[:, 1]]
-        #coloring = np.ones((bottoms.shape[0], 3)) * 255.0
         c = self.color_map[self.object_map['wall']]
         coloring = np.tile(c, [bottoms.shape[0], 1])
-        #for k in self.object_map.keys():
-        #    if self.color_map[self.object_map[k]] != None:
-        #        c = self.color_map[self.object_map[k]]
-        #        sel = visible_blocks == self.object_map[k]
-        #        coloring[sel] = np.tile(c, [bottoms.shape[0], 1])[sel]
 
         shading = np.abs(perpWallDist * 1) * 1.5
         coloring = coloring - shading
         coloring = np.clip(coloring, 0, 255)
-        coloring[(side == 1.0).flatten(), :] *= 0.65  #lighting apparently
+        coloring[(side == 1.0).flatten(), :] *= 0.65
 
         cameraX = np.arange(0, self.width, self.resolution)
         returns = [cameraX, tops, bottoms, coloring]
@@ -232,9 +196,7 @@ class Raycaster(object):
         spriteWidth = np.abs((self.width / (transY + eps)).astype(int)) / 2
 
         drawStartX = -spriteWidth / 2 + spritescreenX
-        #drawStartX[drawStartX < 0] = 0
         drawEndX = spriteWidth / 2 + spritescreenX
-        #drawEndX[drawEndX >= self.width] = self.width - 1
 
         drawX = np.array([drawStartX, drawEndX]).T
         drawY = np.array([drawStartY, drawEndY]).T
